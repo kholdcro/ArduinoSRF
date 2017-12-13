@@ -3,7 +3,7 @@
 #define USE_USBCON
 #include <Wire.h>
 #include <ros.h>
-#include <std_msgs/Float32.h>
+#include <std_msgs/Int16MultiArray.h>
 
 //#define MAIN_08_ADDRESS (0x79 >> 1)
 #define SRF_0_ADDRESS 0xF2
@@ -17,10 +17,9 @@
 #define LOCATION_REGISTER 0x8C
 
 bool selSRF = 0;
-unsigned int timer;
+int16_t sonOut[1];
 
-
-std_msgs::Float32 sonar_msg;
+std_msgs::Int16MultiArray sonar_msg;
 ros::Publisher pub_sonar("sonar", &sonar_msg);
 ros::NodeHandle nh;
 
@@ -28,10 +27,9 @@ void setup()
 {
   nh.initNode();
   nh.advertise(pub_sonar);
-  delay(1000);
+  delay(500);
   Wire.begin();
   delay(100);
-  timer = millis();
 }
 
 void loop()
@@ -41,14 +39,16 @@ void loop()
   requestRange(SRF_1_ADDRESS);
   delay(70);
   //read incoming data
-  int res0 = readData(SRF_0_ADDRESS);
-  int res1 = readData(SRF_1_ADDRESS);
+  sonOut[0] = readData(SRF_0_ADDRESS);
+  sonOut[1] = readData(SRF_1_ADDRESS);
 
-  distance(res0, res1);
- 
-  sonar_msg.data = (float)res0;
+//  distance(res0, res1);
+  sonar_msg.data_length = 2;
+  sonar_msg.data = &sonOut[0];
   pub_sonar.publish( &sonar_msg );
   nh.spinOnce();
+
+  toggleLights();
 }
 
 void requestRange(uint8_t address)
@@ -79,10 +79,10 @@ int readData(uint8_t address)
 // Print out distance
 void distance(int sensorReading0, int sensorReading1)
 {
-//  Serial.print("Sensor reading: \t");
-//  Serial.print(sensorReading0);
-//  Serial.print("\t");
-//  Serial.println(sensorReading1);
+  Serial.print("Sensor reading: \t");
+  Serial.print(sensorReading0);
+  Serial.print("\t");
+  Serial.println(sensorReading1);
 }
 
 void toggleLights()
