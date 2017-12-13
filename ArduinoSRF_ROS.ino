@@ -1,8 +1,9 @@
 //reference:  http://www.robot-electronics.co.uk/htm/srf08tech.html
 
+#define USE_USBCON
 #include <Wire.h>
 #include <ros.h>
-#include <std_msgs/String.h>
+#include <std_msgs/Float32.h>
 
 //#define MAIN_08_ADDRESS (0x79 >> 1)
 #define SRF_0_ADDRESS 0xF2
@@ -16,32 +17,25 @@
 #define LOCATION_REGISTER 0x8C
 
 bool selSRF = 0;
-char unit = 'c'; // 'i' for inches, 'c' for centimeters, 'm' for micro-seconds
-int loopiter = 0;
 unsigned int timer;
+
+
+std_msgs::Float32 sonar_msg;
+ros::Publisher pub_sonar("sonar", &sonar_msg);
+ros::NodeHandle nh;
 
 void setup()
 {
-  Serial.begin(9600);
-  Serial1.begin(9600);
+  nh.initNode();
+  nh.advertise(pub_sonar);
   delay(1000);
   Wire.begin();
-  Serial.println("derp");
   delay(100);
   timer = millis();
 }
 
 void loop()
 {
-  if (millis()- timer > 1000)
-  {
-    Serial.print("Sonar reading at: ");
-    Serial.print(loopiter);
-    Serial.println("Hz");
-    timer = millis();
-    loopiter = 0;
-  }
-
   //start request for data
   requestRange(SRF_0_ADDRESS);
   requestRange(SRF_1_ADDRESS);
@@ -52,7 +46,9 @@ void loop()
 
   distance(res0, res1);
  
-  loopiter++;
+  sonar_msg.data = (float)res0;
+  pub_sonar.publish( &sonar_msg );
+  nh.spinOnce();
 }
 
 void requestRange(uint8_t address)
@@ -83,10 +79,10 @@ int readData(uint8_t address)
 // Print out distance
 void distance(int sensorReading0, int sensorReading1)
 {
-  Serial.print("Sensor reading: \t");
-  Serial.print(sensorReading0);
-  Serial.print("\t");
-  Serial.println(sensorReading1);
+//  Serial.print("Sensor reading: \t");
+//  Serial.print(sensorReading0);
+//  Serial.print("\t");
+//  Serial.println(sensorReading1);
 }
 
 void toggleLights()
